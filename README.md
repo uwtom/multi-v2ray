@@ -42,7 +42,7 @@ source <(curl -sL https://git.io/fNgqx)
 source <(curl -sL https://git.io/fNgqx) --zh
 ```
 
-keep profile to update
+keep profile to update(保留配置文件更新)
 ```
 source <(curl -sL https://git.io/fNgqx) -k
 ```
@@ -75,12 +75,32 @@ v2ray [-h|--help] [options]
     log                  check v2ray log
 ```
 
-## Docker   
-see [jrohy/v2ray](https://hub.docker.com/r/jrohy/v2ray)
+## Docker Run
+```
+docker run -d --name v2ray --restart always --network host jrohy/v2ray
+```
+it will create random port + random header(srtp | wechat-video | utp | dtls) kcp profile  
+
+check v2ray profile:
+```
+docker exec v2ray bash -c "v2ray info"
+```
+
+only restart container to make effect when u change v2ray config.json:
+```
+docker restart v2ray
+```
+
+**warning**: if u run with centos, u should close firewall first
+```
+systemctl stop firewalld.service
+systemctl disable firewalld.service
+```
 
 ## Changelog
 see [Changelog](https://github.com/Jrohy/multi-v2ray/blob/master/Changelog.md)
 
 ## Dependent
+docker: https://hub.docker.com/r/jrohy/v2ray  
 pip: https://pypi.org/project/v2ray-util/  
 python3: https://github.com/Jrohy/python3-install
