@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 import subprocess
 import pkg_resources
 
 from ..util_core.loader import Loader
-from ..util_core.utils import ColorStr, calcul_iptables_traffic
+from ..util_core.utils import ColorStr, calcul_iptables_traffic, readchar
 
 def manage():
+    
     loader = Loader()
 
     profile = loader.profile
@@ -22,11 +24,12 @@ def manage():
         print(_("2.reset special port statistics"))
         print("")
 
-        choice = input(_("please select: "))
+        choice = readchar(_("please select: "))
         if choice == "1":
             print("")
+            ipv6 = True if profile.network == "ipv6" else False
             for group in group_list:
-                print(calcul_iptables_traffic(group.port))
+                print(calcul_iptables_traffic(group.port, ipv6))
             print("")
 
         elif choice == "2":

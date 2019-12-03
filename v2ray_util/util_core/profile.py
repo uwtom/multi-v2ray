@@ -3,10 +3,9 @@
 import json
 import time
 import os
-import urllib.request
 
 from .config import Config
-from .utils import ColorStr
+from .utils import ColorStr, get_ip
 from .group import SS, Socks, Vmess, Mtproto, Quic, Group, Dyport
 
 class Stats:
@@ -24,6 +23,7 @@ class Profile:
         self.stats = None
         self.ban_bt = False
         self.user_number = 0
+        self.network = "ipv4"
         self.modify_time = os.path.getmtime(self.path)
         self.read_json()
 
@@ -62,16 +62,20 @@ class Profile:
             if "protocol" in rule and "bittorrent" in rule["protocol"]:
                 self.ban_bt = True
 
-        #获取本机IP地址
-        my_ip = urllib.request.urlopen('http://api.ipify.org').read()
-        local_ip = bytes.decode(my_ip)
+        local_ip = get_ip()
+
+        if ":" in local_ip:
+            self.network = "ipv6"
 
         group_ascii = 64  # before 'A' ascii code
         for index, json_part in enumerate(conf_inbounds):
             group = self.parse_group(json_part, index, local_ip)
             if group != None:
                 group_ascii = group_ascii + 1
-                group.tag = chr(group_ascii)
+                if group_ascii > 90:
+                    group.tag = str(group_ascii)
+                else:
+                    group.tag = chr(group_ascii)
                 self.group_list.append(group)
         
         if len(self.group_list) == 0:
@@ -90,6 +94,9 @@ class Profile:
         conf_settings = part_json["settings"]
 
         port_info = str(part_json["port"]).split("-", 2)
+
+        if "domain" in part_json and part_json["domain"]:
+            conf_ip = part_json["domain"]
 
         if len(port_info) == 2:
             port, end_port = port_info
@@ -119,9 +126,6 @@ class Profile:
             elif conf_stream["tcpSettings"]:
                 host = conf_stream["tcpSettings"]["header"]["request"]["headers"]["Host"]
                 header = "http"
-
-            if (tls == "tls"):
-                conf_ip = Config().get_data('domain')
 
             if conf_stream["network"] == "kcp" and "header" in conf_stream["kcpSettings"]:
                 header = conf_stream["kcpSettings"]["header"]["type"]

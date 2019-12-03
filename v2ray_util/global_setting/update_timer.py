@@ -2,14 +2,24 @@
 # -*- coding: utf-8 -*-
 import os
 import time
-import platform
-
 from ..util_core.config import Config
-from ..util_core.utils import ColorStr
+from ..util_core.loader import Loader
+from ..util_core.utils import ColorStr, readchar
 
-IS_CENTOS = True if "centos" in platform.linux_distribution()[0].lower() else False
+def restartCron():
+    import platform
+    IS_CENTOS = True if "centos" in platform.linux_distribution()[0].lower() else False
+    if os.path.exists("/.dockerenv"):
+        pass
+    elif IS_CENTOS:
+        os.system("systemctl restart crond >/dev/null 2>&1")
+    else:
+        os.system("systemctl restart cron >/dev/null 2>&1")
 
 def planUpdate():
+    if Loader().profile.network == "ipv6":
+        print(ColorStr.yellow("ipv6 not support!"))
+        return
     if Config().get_data("lang") == "zh":
         origin_time_zone = int(time.strftime("%z", time.gmtime())[0:-2])
         beijing_time_zone, beijing_update_time = 8, 3
@@ -23,12 +33,9 @@ def planUpdate():
     else:
         local_time = 3
     os.system('echo "SHELL=/bin/bash" >> crontab.txt && echo "$(crontab -l)" >> crontab.txt')
-    os.system('echo "0 {} * * * bash <(curl -L -s https://install.direct/go.sh) | tee -a /root/v2rayUpdate.log && service v2ray restart" >> crontab.txt'.format(local_time))
+    os.system('echo "0 {} * * * bash <(curl -L -s https://install.direct/go.sh) | tee -a /root/v2rayUpdate.log && v2ray-util restart" >> crontab.txt'.format(local_time))
     os.system("crontab crontab.txt && rm -f crontab.txt")
-    if IS_CENTOS:
-        os.system("service crond restart >/dev/null 2>&1")
-    else:
-        os.system("service cron restart >/dev/null 2>&1")
+    restartCron()
     print(ColorStr.green(_("success open schedule update task!")))
     
 def manage():
@@ -45,7 +52,7 @@ def manage():
     print("")
     print(_("Tip: open schedule update v2ray at 3:00"))
 
-    choice = input(_("please select: "))
+    choice = readchar(_("please select: "))
 
     if choice == "1":
         if check_result:
@@ -56,7 +63,4 @@ def manage():
     elif choice == "2":
         os.system("crontab -l|sed '/SHELL=/d;/v2ray/d' > crontab.txt && crontab crontab.txt && rm -f crontab.txt")
         print(ColorStr.green(_("close shedule task success")))
-        if IS_CENTOS:
-            os.system("service crond restart >/dev/null 2>&1")
-        else:
-            os.system("service cron restart >/dev/null 2>&1")
+        restartCron()

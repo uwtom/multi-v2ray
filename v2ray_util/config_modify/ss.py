@@ -5,19 +5,19 @@ import string
 import sys
 
 from ..util_core.group import SS
+from ..util_core.v2ray import restart
 from ..util_core.writer import GroupWriter
 from ..util_core.selector import GroupSelector
-from ..util_core.utils import ss_method, ColorStr
+from ..util_core.utils import ss_method, ColorStr, readchar
 
 class SSFactory:
     def __init__(self):
         self.method_tuple = ss_method()
 
     def get_method(self):
-        print(_("please select shadowsocks method:"))
         for index, method in enumerate(self.method_tuple):
             print ("{}.{}".format(index + 1, method))
-        choice = input()
+        choice = readchar(_("please select shadowsocks method:"))
         choice = int(choice)
         if choice < 0 or choice > len(self.method_tuple):
             print(_("input out of range!!"))
@@ -32,6 +32,7 @@ class SSFactory:
             new_pass = random_pass
         return new_pass
 
+@restart()
 def modify(alter_type='method'):
     # 外部传参来决定修改哪种, 默认修改method
     correct_way = ("method", "password")
@@ -58,3 +59,4 @@ def modify(alter_type='method'):
         elif alter_type == correct_way[1]:
             gw.write_ss_password(sm.get_password())
         print("{0} {1} {2}\n".format(_("modify Shadowsocks"),alter_type, _("success")))
+        return True

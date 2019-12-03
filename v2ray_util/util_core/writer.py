@@ -199,7 +199,8 @@ class StreamWriter(Writer):
             ws = self.load_template('ws.json')
             salt = '/' + ''.join(random.sample(string.ascii_letters + string.digits, 8)) + '/'
             ws["wsSettings"]["path"] = salt
-            ws["wsSettings"]["headers"]["Host"] = kw['host']
+            if "host" in kw:
+                ws["wsSettings"]["headers"]["Host"] = kw['host']
             self.part_json["streamSettings"] = ws
 
         elif self.stream_type == StreamType.H2:
@@ -230,6 +231,13 @@ class GroupWriter(Writer):
 
     def write_port(self, port):
         self.part_json["port"] = str(port) if str(port).find("-") > 0 else int(port)
+        self.save()
+
+    def write_domain(self, domain=''):
+        if domain:
+            self.part_json["domain"] = domain
+        elif "domain" in self.part_json:
+            del self.part_json["domain"]
         self.save()
 
     def write_ss_password(self, new_password):
@@ -276,7 +284,8 @@ class GroupWriter(Writer):
             ]}
             self.part_json["streamSettings"]["security"] = "tls"
             self.part_json["streamSettings"]["tlsSettings"] = tls_settings
-            Config().set_data("domain", domain)
+            self.part_json["domain"] = domain
+            self.save()
         else:
             if self.part_json["streamSettings"]["network"] == StreamType.H2.value:
                 print(_("close tls will also close HTTP/2!"))
@@ -286,7 +295,7 @@ class GroupWriter(Writer):
             else:
                 self.part_json["streamSettings"]["security"] = "none"
                 self.part_json["streamSettings"]["tlsSettings"] = {}
-        self.save()
+            self.save()
 
     def write_tfo(self, action = 'del'):
         if action == "del":

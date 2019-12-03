@@ -8,6 +8,9 @@ BEIJING_UPDATE_TIME=3
 #记录最开始运行脚本的路径
 BEGIN_PATH=$(pwd)
 
+# 0: ipv4, 1: ipv6
+NETWORK=0
+
 #安装方式, 0为全新安装, 1为保留v2ray配置更新
 INSTALL_WAY=0
 
@@ -18,15 +21,15 @@ REMOVE=0
 
 CHINESE=0
 
-BASE_SOURCE_PATH="https://raw.githubusercontent.com/Jrohy/multi-v2ray/master"
+BASE_SOURCE_PATH="https://multi.netlify.com"
 
-CLEAN_IPTABLES_SHELL="$BASE_SOURCE_PATH/v2ray_util/global_setting/clean_iptables.sh"
-
-BASH_COMPLETION_SHELL="$BASE_SOURCE_PATH/v2ray.bash"
+UTIL_PATH="/etc/v2ray_util/util.cfg"
 
 UTIL_CFG="$BASE_SOURCE_PATH/v2ray_util/util_core/util.cfg"
 
-UTIL_PATH="/etc/v2ray_util/util.cfg"
+BASH_COMPLETION_SHELL="$BASE_SOURCE_PATH/v2ray"
+
+CLEAN_IPTABLES_SHELL="$BASE_SOURCE_PATH/v2ray_util/global_setting/clean_iptables.sh"
 
 #Centos 临时取消别名
 [[ -f /etc/redhat-release && -z $(echo $SHELL|grep zsh) ]] && unalias -a
@@ -82,21 +85,17 @@ help(){
 
 removeV2Ray() {
     #卸载V2ray官方脚本
-    systemctl stop v2ray  >/dev/null 2>&1
-    systemctl disable v2ray  >/dev/null 2>&1
-    service v2ray stop  >/dev/null 2>&1
-    update-rc.d -f v2ray remove  >/dev/null 2>&1
-    rm -rf  /etc/v2ray/  >/dev/null 2>&1
-    rm -rf /usr/bin/v2ray  >/dev/null 2>&1
-    rm -rf /var/log/v2ray/  >/dev/null 2>&1
-    rm -rf /lib/systemd/system/v2ray.service  >/dev/null 2>&1
-    rm -rf /etc/init.d/v2ray  >/dev/null 2>&1
+    bash <(curl -L -s https://install.direct/go.sh) --remove >/dev/null 2>&1
+    rm -rf /etc/v2ray >/dev/null 2>&1
+    rm -rf /var/log/v2ray >/dev/null 2>&1
 
     #清理v2ray相关iptable规则
     bash <(curl -L -s $CLEAN_IPTABLES_SHELL)
 
     #卸载multi-v2ray
     pip uninstall v2ray_util -y
+    rm -rf /usr/share/bash-completion/completions/v2ray.bash >/dev/null 2>&1
+    rm -rf /usr/share/bash-completion/completions/v2ray >/dev/null 2>&1
     rm -rf /etc/bash_completion.d/v2ray.bash >/dev/null 2>&1
     rm -rf /usr/local/bin/v2ray >/dev/null 2>&1
     rm -rf /etc/v2ray_util >/dev/null 2>&1
@@ -106,10 +105,10 @@ removeV2Ray() {
     crontab crontab.txt >/dev/null 2>&1
     rm -f crontab.txt >/dev/null 2>&1
 
-    if [[ ${OS} == 'CentOS' || ${OS} == 'Fedora' ]];then
-        service crond restart >/dev/null 2>&1
+    if [[ ${OS} =~ 'CentOS' || ${OS} == 'Fedora' ]];then
+        systemctl restart crond >/dev/null 2>&1
     else
-        service cron restart >/dev/null 2>&1
+        systemctl restart cron >/dev/null 2>&1
     fi
 
     #删除multi-v2ray环境变量
@@ -127,6 +126,14 @@ closeSELinux() {
     fi
 }
 
+judgeNetwork() {
+    curl http://api.ipify.org &>/dev/null
+    if [[ $? != 0 ]];then
+        [[ `curl -s icanhazip.com` =~ ":" ]] && NETWORK=1
+    fi
+    export NETWORK=$NETWORK
+}
+
 checkSys() {
     #检查是否为Root
     [ $(id -u) != "0" ] && { colorEcho ${RED} "Error: You must be root to run this script"; exit 1; }
@@ -135,6 +142,9 @@ checkSys() {
     if [[ -e /etc/redhat-release ]];then
         if [[ $(cat /etc/redhat-release | grep Fedora) ]];then
             OS='Fedora'
+            PACKAGE_MANAGER='dnf'
+        elif [[ $(cat /etc/redhat-release |grep "CentOS Linux release 8") ]];then
+            OS='CentOS8'
             PACKAGE_MANAGER='dnf'
         else
             OS='CentOS'
@@ -157,19 +167,24 @@ checkSys() {
 
 #安装依赖
 installDependent(){
-    if [[ ${OS} == 'CentOS' || ${OS} == 'Fedora' ]];then
-        ${PACKAGE_MANAGER} install ntpdate socat crontabs lsof which -y
+    if [[ ${OS} =~ 'CentOS' || ${OS} == 'Fedora' ]];then
+        if [[ ${OS} != 'CentOS8' ]];then
+            ${PACKAGE_MANAGER} ntpdate -y
+        fi
+        ${PACKAGE_MANAGER} install socat crontabs lsof which -y
     else
         ${PACKAGE_MANAGER} update
         ${PACKAGE_MANAGER} install ntpdate socat cron lsof -y
     fi
 
-    #install python3 & pip3
-    bash <(curl -sL https://git.io/fhqMz)
+    #install python3 & pip
+    bash <(curl -sL https://python3.netlify.com/install.sh)
 }
 
 #设置定时升级任务
 planUpdate(){
+    [[ $NETWORK == 1 ]] && return
+
     if [[ $CHINESE == 1 ]];then
         #计算北京时间早上3点时VPS的实际时间
         ORIGIN_TIME_ZONE=$(date -R|awk '{printf"%d",$6}')
@@ -189,13 +204,13 @@ planUpdate(){
     OLD_CRONTAB=$(crontab -l)
     echo "SHELL=/bin/bash" >> crontab.txt
     echo "${OLD_CRONTAB}" >> crontab.txt
-	echo "0 ${LOCAL_TIME} * * * bash <(curl -L -s https://install.direct/go.sh) | tee -a /root/v2rayUpdate.log && service v2ray restart" >> crontab.txt
+	echo "0 ${LOCAL_TIME} * * * bash <(curl -L -s https://install.direct/go.sh) | tee -a /root/v2rayUpdate.log && v2ray-util restart" >> crontab.txt
 	crontab crontab.txt
 	sleep 1
-	if [[ ${OS} == 'CentOS' || ${OS} == 'Fedora' ]];then
-        service crond restart
+	if [[ ${OS} =~ 'CentOS' || ${OS} == 'Fedora' ]];then
+        systemctl restart crond
 	else
-		service cron restart
+        systemctl restart cron
 	fi
 	rm -f crontab.txt
 	colorEcho ${GREEN} "success open schedule update task: beijing time ${BEIJING_UPDATE_TIME}\n"
@@ -204,7 +219,7 @@ planUpdate(){
 updateProject() {
     local DOMAIN=""
 
-    [[ ! $(type pip3 2>/dev/null) ]] && colorEcho $RED "pip3 no install!" && exit 1
+    [[ ! $(type pip 2>/dev/null) ]] && colorEcho $RED "pip no install!" && exit 1
 
     if [[ -e /usr/local/multi-v2ray/multi-v2ray.conf ]];then
         TEMP_VALUE=$(cat /usr/local/multi-v2ray/multi-v2ray.conf|grep domain|awk 'NR==1')
@@ -212,7 +227,7 @@ updateProject() {
         rm -rf /usr/local/multi-v2ray
     fi
 
-    pip3 install -U v2ray_util
+    pip install -U v2ray_util
 
     if [[ -e $UTIL_PATH ]];then
         [[ -z $(cat $UTIL_PATH|grep lang) ]] && echo "lang=en" >> $UTIL_PATH
@@ -227,25 +242,35 @@ updateProject() {
     rm -f /usr/local/bin/v2ray >/dev/null 2>&1
     ln -s $(which v2ray-util) /usr/local/bin/v2ray
 
+    #移除旧的v2ray bash_completion脚本
+    [[ -e /etc/bash_completion.d/v2ray.bash ]] && rm -f /etc/bash_completion.d/v2ray.bash
+    [[ -e /usr/share/bash-completion/completions/v2ray.bash ]] && rm -f /usr/share/bash-completion/completions/v2ray.bash
+
     #更新v2ray bash_completion脚本
-    curl $BASH_COMPLETION_SHELL > /etc/bash_completion.d/v2ray.bash
-    [[ -z $(echo $SHELL|grep zsh) ]] && source /etc/bash_completion.d/v2ray.bash
+    curl $BASH_COMPLETION_SHELL > /usr/share/bash-completion/completions/v2ray
+    [[ -z $(echo $SHELL|grep zsh) ]] && source /usr/share/bash-completion/completions/v2ray
     
     #安装/更新V2ray主程序
-    bash <(curl -L -s https://install.direct/go.sh)
+    if [[ $NETWORK == 1 ]];then
+        bash <(curl -L -s https://install.direct/go.sh) --source jsdelivr
+    else
+        bash <(curl -L -s https://install.direct/go.sh)
+    fi
 }
 
 #时间同步
 timeSync() {
     if [[ ${INSTALL_WAY} == 0 ]];then
         echo -e "${Info} Time Synchronizing.. ${Font}"
-        ntpdate pool.ntp.org
+        if [[ `command -v ntpdate` ]];then
+            ntpdate pool.ntp.org
+        elif [[ `command -v chronyc` ]];then
+            chronyc -a makestep
+        fi
+
         if [[ $? -eq 0 ]];then 
             echo -e "${OK} Time Sync Success ${Font}"
             echo -e "${OK} now: `date -R`${Font}"
-            sleep 1
-        else
-            echo -e "${Error} Time sync fail, please run command to sync:${Font}${Yellow}ntpdate pool.ntp.org${Font}"
         fi
     fi
 }
@@ -258,9 +283,6 @@ profileInit() {
     #解决Python3中文显示问题
     [[ -z $(grep PYTHONIOENCODING=utf-8 ~/$ENV_FILE) ]] && echo "export PYTHONIOENCODING=utf-8" >> ~/$ENV_FILE && source ~/$ENV_FILE
 
-    # 加入v2ray tab补全环境变量
-    [[ -z $(echo $SHELL|grep zsh) && -z $(grep v2ray.bash ~/$ENV_FILE) ]] && echo "source /etc/bash_completion.d/v2ray.bash" >> ~/$ENV_FILE && source ~/$ENV_FILE
-
     #全新安装的新配置
     if [[ ${INSTALL_WAY} == 0 ]];then 
         v2ray new
@@ -268,7 +290,6 @@ profileInit() {
         v2ray convert
     fi
 
-    bash <(curl -L -s $CLEAN_IPTABLES_SHELL)
     echo ""
 }
 
@@ -288,6 +309,7 @@ installFinish() {
 
 
 main() {
+    judgeNetwork
 
     [[ ${HELP} == 1 ]] && help && return
 
@@ -309,8 +331,6 @@ main() {
     updateProject
 
     profileInit
-
-    service v2ray restart
 
     installFinish
 }

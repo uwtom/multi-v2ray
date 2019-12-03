@@ -1,32 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 import sys
 import subprocess
 import pkg_resources
 
 from .util_core.v2ray import V2ray
-from .util_core.utils import ColorStr, open_port
+from .util_core.utils import ColorStr, open_port, loop_input_choice_number
 from .global_setting import stats_ctr, iptables_ctr, ban_bt, update_timer
-from .config_modify import base, multiple, ss, stream, tls
-
-def loop_input_choice_number(input_tip, number_max):
-    """
-    循环输入选择的序号,直到符合规定为止
-    """
-    while True:
-        print("")
-        choice = input(input_tip)
-        if not choice:
-            break
-        if choice.isnumeric():
-            choice = int(choice)
-        else:
-            print(ColorStr.red(_("input error, please input again")))
-            continue
-        if (choice <= number_max and choice > 0):
-            return choice
-        else:
-            print(ColorStr.red(_("input error, please input again")))
+from .config_modify import base, multiple, ss, stream, tls, cdn
 
 def help():
     exec_name = sys.argv[0]
@@ -43,7 +25,8 @@ def help():
     status               查看 V2Ray 运行状态
     new                  重建新的v2ray json配置文件
     update               更新 V2Ray 到最新Release版本
-    add                  新增mkcp + 随机一种 (srtp | wechat-video | utp | dtls) header伪装的端口(Group)
+    update.sh            更新 multi-v2ray 到最新版本
+    add                  新增mkcp + 随机一种 (srtp|wechat-video|utp|dtls|wireguard) header伪装的端口(Group)
     add [wechat|utp|srtp|dtls|wireguard|socks|mtproto|ss]     新增一种协议的组，端口随机,如 v2ray add utp 为新增utp协议
     del                  删除端口组
     info                 查看配置
@@ -51,7 +34,9 @@ def help():
     tls                  修改tls
     tfo                  修改tcpFastOpen
     stream               修改传输协议
-    stats                iptables流量统计
+    cdn                  走cdn
+    stats                v2ray流量统计
+    iptables             iptables流量统计
     clean                清理日志
     log                  查看日志
         """.format(exec_name[exec_name.rfind("/") + 1:]))
@@ -66,7 +51,8 @@ def help():
     status               check V2Ray status
     new                  create new json profile
     update               update v2ray to latest
-    add                  random create mkcp + (srtp | wechat-video | utp | dtls) fake header group
+    update.sh            update multi-v2ray to latest
+    add                  random create mkcp + (srtp|wechat-video|utp|dtls|wireguard) fake header group
     add [wechat|utp|srtp|dtls|wireguard|socks|mtproto|ss]     create special protocol, random new port
     del                  delete port group
     info                 check v2ray profile
@@ -74,10 +60,19 @@ def help():
     tls                  modify tls
     tfo                  modify tcpFastOpen
     stream               modify protocol
-    stats                iptables traffic statistics
+    cdn                  cdn mode
+    stats                v2ray traffic statistics
+    iptables             iptables traffic statistics
     clean                clean v2ray log
     log                  check v2ray log
         """.format(exec_name[exec_name.rfind("/") + 1:]))
+
+def updateSh():
+    if os.path.exists("/.dockerenv"):
+        print(ColorStr.yellow("docker run not support update!"))
+    else:
+        subprocess.Popen("curl -Ls https://multi.netlify.com/v2ray.sh -o temp.sh", shell=True).wait()
+        subprocess.Popen("bash temp.sh -k && rm -f temp.sh", shell=True).wait()
 
 def parse_arg():
     if len(sys.argv) == 1:
@@ -89,9 +84,9 @@ def parse_arg():
             V2ray.stop()
         elif sys.argv[1] == "restart":
             V2ray.restart()
-        elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
+        elif sys.argv[1] in ("-h", "--help"):
             help()
-        elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
+        elif sys.argv[1] in ("-v", "--version"):
             V2ray.version()
         elif sys.argv[1] == "status":
             V2ray.status()
@@ -99,40 +94,37 @@ def parse_arg():
             V2ray.info()
         elif sys.argv[1] == "port":
             base.port()
-            open_port()
-            V2ray.restart()
         elif sys.argv[1] == "tls":
             tls.modify()
-            V2ray.restart()
         elif sys.argv[1] == "tfo":
             base.tfo()
-            V2ray.restart()
         elif sys.argv[1] == "stream":
             stream.modify()
-            V2ray.restart()
         elif sys.argv[1] == "stats":
+            stats_ctr.manage()
+        elif sys.argv[1] == "iptables":
             iptables_ctr.manage()
         elif sys.argv[1] == "clean":
             V2ray.cleanLog()
         elif sys.argv[1] == "del":
             multiple.del_port()
-            V2ray.restart()
         elif sys.argv[1] == "add":
             multiple.new_port()
-            open_port()
-            V2ray.restart()
         elif sys.argv[1] == "update":
             V2ray.update()
+        elif sys.argv[1] == "update.sh":
+            updateSh()
         elif sys.argv[1] == "new":
             V2ray.new()
         elif sys.argv[1] == "convert":
             V2ray.convert()
         elif sys.argv[1] == "log":
             V2ray.log()
+        elif sys.argv[1] == "cdn":
+            cdn.modify()
     else:
         if sys.argv[1] == "add":
             multiple.new_port(sys.argv[2])
-            V2ray.restart()
     sys.exit(0)
 
 def service_manage():
@@ -169,11 +161,10 @@ def user_manage():
         multiple.del_user()
     elif choice == 4:
         multiple.del_port()
-    V2ray.restart()
 
 def profile_alter():
     show_text = (_("modify email"), _("modify UUID"), _("modify alterID"), _("modify port"), _("modify stream"), _("modify tls"), 
-                _("modify tcpFastOpen"), _("modify dyn_port"), _("modify shadowsocks method"), _("modify shadowsocks password"))
+                _("modify tcpFastOpen"), _("modify dyn_port"), _("modify shadowsocks method"), _("modify shadowsocks password"), _("CDN mode(need domain)"))
     print("")
     for index, text in enumerate(show_text): 
         print("{}.{}".format(index + 1, text))
@@ -188,7 +179,6 @@ def profile_alter():
         base.alterid()
     elif choice == 4:
         base.port()
-        open_port()
     elif choice == 5:
         stream.modify()
     elif choice == 6:
@@ -201,7 +191,8 @@ def profile_alter():
         ss.modify('method')
     elif choice == 10:
         ss.modify('password')
-    V2ray.restart()
+    elif choice == 11:
+        cdn.modify()
 
 def global_setting():
     show_text = (_("V2ray Traffic Statistics"), _("Iptables Traffic Statistics"), _("Ban Bittorrent"), _("Schedule Update V2ray"), _("Clean Log"), _("Change Language"))
@@ -215,7 +206,6 @@ def global_setting():
         iptables_ctr.manage()
     elif choice == 3:
         ban_bt.manage()
-        V2ray.restart()
     elif choice == 4:
         update_timer.manage()
     elif choice == 5:

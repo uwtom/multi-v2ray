@@ -114,6 +114,9 @@ msgstr "更改Shadowsocks加密方式"
 msgid "modify shadowsocks password"
 msgstr "更改Shadowsocks密码"
 
+msgid "CDN mode(need domain)"
+msgstr "走CDN(需要域名)"
+
 msgid "V2ray Traffic Statistics"
 msgstr "流量统计(v2ray)"
 
@@ -182,8 +185,8 @@ msgstr "请输入数字来"
 msgid "last group can't delete!!!"
 msgstr "仅剩最后一个端口无法删除!!!"
 
-msgid "please input group alphabet to"
-msgstr "请输入节点Group字母来"
+msgid "please input group to"
+msgstr "请输入节点Group来"
 
 msgid "input error, please check group"
 msgstr "输入有误，请检查组"
@@ -197,6 +200,12 @@ msgstr "是否存在"
 
 msgid "clean v2ray log success!"
 msgstr "清理v2ray日志成功!"
+
+msgid "ipv6 network not support update v2ray online, please manual donwload v2ray to update!"
+msgstr "ipv6 网络不支持v2ray的在线更新, 请手动下载v2ray来更新!"
+
+msgid "download v2ray-linux-xx.zip and run 'bash <(curl -L -s https://install.direct/go.sh) -l v2ray-linux-xx.zip' to update"
+msgstr "下载v2ray-linux-xx.zip包然后运行 'bash <(curl -L -s https://install.direct/go.sh) -l v2ray-linux-xx.zip' 来更新"
 
 msgid "check v2ray no install, auto install v2ray.."
 msgstr "检测到本机没安装v2ray, 正在自动安装.."
@@ -271,14 +280,17 @@ msgstr "1.开启流量统计"
 msgid "2.close statistics"
 msgstr "2.关闭流量统计"
 
-msgid "3.check statistics result"
-msgstr "3.查看流量统计"
+msgid "3.check user statistics result"
+msgstr "3.查看用户流量统计"
 
-msgid "4.reset statistics"
-msgstr "4.重置流量统计"
+msgid "4.check group statistics result"
+msgstr "4.查看组流量统计"
 
-msgid "tip: only have email node can statistics, restart v2ray will reset traffic statistics!!!"
-msgstr "tip: 具有有效email节点才会统计, 重启v2ray会重置流量统计!!!"
+msgid "5.reset statistics"
+msgstr "5.重置流量统计"
+
+msgid "tip: restart v2ray will reset traffic statistics!!!"
+msgstr "tip: 重启v2ray会重置流量统计!!!"
 
 msgid "open traffic statistics will close schedule update v2ray, continue?(y/n): "
 msgstr "开启流量统计会关闭定时更新v2ray服务, 是否继续y/n: "
@@ -292,11 +304,11 @@ msgstr "开启流量统计成功!"
 msgid "close traffic statistics success!"
 msgstr "关闭流量统计成功!"
 
-msgid "only open traffic statistics can"
-msgstr "流量统计开启状态才能"
+msgid "only open traffic statistics to operate"
+msgstr "流量统计开启状态才能操作"
 
-msgid "please input number or group alphabet to"
-msgstr "请输入流量的组别(字母)或者序号(数字)来"
+msgid "please input number or group alphabet to reset: "
+msgstr "请输入流量的组别(字母)或者序号(数字)来重置: "
 
 msgid "no effective email!!!"
 msgstr "无有效邮箱，无法统计!!!"
@@ -438,11 +450,14 @@ msgstr "回车直接以该端口新建Group, 否则输入自定义端口"
 msgid "new port"
 msgstr "新端口为"
 
-msgid "user number"
-msgstr "user数量"
+msgid "add user"
+msgstr "新增用户"
 
-msgid "input email to create user, or enter to pass: "
-msgstr "是否输入email来新建用户, 回车直接跳过: "
+msgid "create random email:"
+msgstr "生成随机邮箱:"
+
+msgid ", enter to use it or input new email: "
+msgstr ", 回车直接使用或者输入自定义邮箱: "
 
 msgid "local group is socks, please input user and password to create user"
 msgstr "当前组为socks组, 请输入用户密码创建新的socks用户"
@@ -512,6 +527,9 @@ msgstr "修改传输方式"
 msgid "group protocol"
 msgstr "当前组的传输方式为"
 
+msgid "please select new protocol: "
+msgstr "请选择新的传输方式: "
+
 msgid "please input number!"
 msgstr "请输入数字!"
 
@@ -574,6 +592,37 @@ msgid "V2ray MTProto/Shadowsocks protocol not support https!!!"
 msgstr "V2ray MTProto/Shadowsocks协议不支持配置https!!!"
 
 ### tls.py end ###
+
+### cdn.py start ###
+msgid "modify cdn"
+msgstr "修改cdn"
+
+msgid "1.open http cdn"
+msgstr "1.开启 http cdn"
+
+msgid "2.open https cdn"
+msgstr "2.开启 https cdn"
+
+msgid "3.close http cdn"
+msgstr "3.关闭http cdn"
+
+msgid "please input run cdn mode domain: "
+msgstr "请输入走cdn的域名: "
+
+msgid "domain is empty!"
+msgstr "域名为空!"
+
+msgid "must be close cdn proxy!"
+msgstr "必须先关闭cdn的代理!"
+
+msgid "only support http port cdn close!"
+msgstr "仅支持http的cdn关闭!"
+
+msgid "please select http port to cdn: "
+msgstr "请选择走http cdn端口的序号: "
+
+msgid "please select https port to cdn: "
+msgstr "请选择走https cdn端口的序号: "
 
 ### update_timer.py start ###
 
