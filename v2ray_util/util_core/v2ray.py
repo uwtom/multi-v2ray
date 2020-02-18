@@ -3,11 +3,10 @@
 import os
 import uuid
 import time
-import random
 import subprocess
 import pkg_resources
 from functools import wraps
-from .utils import ColorStr, open_port, get_ip, is_ipv6
+from .utils import ColorStr, open_port, get_ip, is_ipv6, random_port
 
 def restart(port_open=False):
     """
@@ -40,7 +39,6 @@ class V2ray:
     def run(command, keyword):
         try:
             subprocess.check_output(command, shell=True)
-            open_port()
             print("{}ing v2ray...".format(keyword))
             time.sleep(2)
             if subprocess.check_output("systemctl is-active v2ray|grep active", shell=True) or keyword == "stop":
@@ -148,9 +146,10 @@ class V2ray:
         subprocess.call("rm -rf /etc/v2ray/config.json && cp {}/server.json /etc/v2ray/config.json".format(pkg_resources.resource_filename('v2ray_util', "json_template")), shell=True)
         new_uuid = uuid.uuid1()
         print("new UUID: {}".format(ColorStr.green(str(new_uuid))))
-        random_port = random.randint(1000, 65535)
-        print("new port: {}".format(ColorStr.green(str(random_port))))
-        subprocess.call("sed -i \"s/cc4f8d5b-967b-4557-a4b6-bde92965bc27/{0}/g\" /etc/v2ray/config.json && sed -i \"s/999999999/{1}/g\" /etc/v2ray/config.json".format(new_uuid, random_port), shell=True)
+        new_port = random_port(1000, 65535)
+        print("new port: {}".format(ColorStr.green(str(new_port))))
+        subprocess.call("sed -i \"s/cc4f8d5b-967b-4557-a4b6-bde92965bc27/{0}/g\" /etc/v2ray/config.json && sed -i \"s/999999999/{1}/g\" /etc/v2ray/config.json".format(new_uuid, new_port), shell=True)
         from ..config_modify import stream
         stream.StreamModifier().random_kcp()
+        open_port()
         cls.restart()

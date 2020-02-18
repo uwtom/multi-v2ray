@@ -102,9 +102,21 @@ def port_is_use(port):
     """
     判断端口是否占用
     """
-    cmd = "lsof -i:" + str(port)
-    result = os.popen(cmd).readlines()
-    return result != []
+    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    try:
+        s.connect('127.0.0.1',int(port))
+        s.shutdown(2)
+        #利用shutdown()函数使socket双向数据传输变为单向数据传输。shutdown()需要一个单独的参数，
+        #该参数表示了如何关闭socket。具体为：0表示禁止将来读；1表示禁止将来写；2表示禁止将来读和写。
+        return True
+    except:
+        return False
+
+def random_port(start_port, end_port):
+    while True:
+        random_port = random.randint(start_port, end_port)
+        if not port_is_use(random_port):
+            return random_port
 
 def is_email(email):
     """
@@ -182,6 +194,7 @@ def gen_cert(domain):
         else:
             os.system("curl https://get.acme.sh | sh")
 
+    open_port(80)
     get_ssl_cmd = "bash /root/.acme.sh/acme.sh --issue -d " + domain + " --debug --standalone --keylength ec-256"
     if ":" in local_ip:
         get_ssl_cmd = get_ssl_cmd + " --listen-v6"
@@ -206,41 +219,65 @@ def calcul_iptables_traffic(port, ipv6=False):
                 ColorStr.cyan(upload_traffic), ColorStr.cyan(download_traffic), ColorStr.cyan(total_traffic))
 
 def clean_iptables(port):
+    import platform
     from .loader import Loader
+
     iptable_way = "iptables" if Loader().profile.network == "ipv4" else "ip6tables" 
 
     clean_cmd = "{} -D {} {}"
-    check_cmd = "{} -nvL {} --line-number|grep -w \"{}\"|awk '{print $1}'|sort -r"
+    check_cmd = "%s -nvL %s --line-number|grep -w \"%s\"|awk '{print $1}'|sort -r"
+    firewall_clean_cmd = "firewall-cmd --zone=public --remove-port={}/tcp --remove-port={}/udp --permanent >/dev/null 2>&1"
 
-    input_result = os.popen(check_cmd.format(iptable_way, "INPUT", str(port))).readlines()
-    for line in input_result:
-        os.system(clean_cmd.format(iptable_way, "INPUT", str(line)))
+    if "centos-8" in platform.platform():
+        os.system(firewall_clean_cmd.format(str(port), str(port)))
+        os.system("firewall-cmd --reload >/dev/null 2>&1")
+    else:
+        input_result = os.popen(check_cmd % (iptable_way, "INPUT", str(port))).readlines()
+        for line in input_result:
+            os.system(clean_cmd.format(iptable_way, "INPUT", str(line)))
 
-    output_result = os.popen(check_cmd.format(iptable_way, "OUTPUT", str(port))).readlines()
-    for line in output_result:
-        os.system(clean_cmd.format(iptable_way, "OUTPUT", str(line)))
+        output_result = os.popen(check_cmd % (iptable_way, "OUTPUT", str(port))).readlines()
+        for line in output_result:
+            os.system(clean_cmd.format(iptable_way, "OUTPUT", str(line)))
 
-def open_port():
+def open_port(openport=-1):
+    import platform
+    from .loader import Loader
+
+    is_centos8 = True if "centos-8" in platform.platform() else False
     input_cmd = "{} -I INPUT -p {} --dport {} -j ACCEPT"
     output_cmd = "{} -I OUTPUT -p {} --sport {}"
     check_cmd = "{} -nvL --line-number|grep -w \"{}\""
-
-    from .loader import Loader
+    firewall_open_cmd = "firewall-cmd --zone=public --add-port={}/tcp --add-port={}/udp --permanent >/dev/null 2>&1"
 
     profile = Loader().profile
-    iptable_way = "iptables" if profile.network == "ipv4" else "ip6tables" 
     group_list = profile.group_list
-
     port_set = set([group.port for group in group_list])
 
-    for port in port_set:
-        port_str = str(port)
-        if len(os.popen(check_cmd.format(iptable_way, port_str)).readlines()) > 0:
-            continue
-        os.system(input_cmd.format(iptable_way, "tcp", port_str))
-        os.system(input_cmd.format(iptable_way, "udp", port_str))
-        os.system(output_cmd.format(iptable_way, "tcp", port_str))
-        os.system(output_cmd.format(iptable_way, "udp", port_str))
+    iptable_way = "iptables" if profile.network == "ipv4" else "ip6tables"
+    if openport != -1:
+        port_str = str(openport)
+        if is_centos8:
+            os.system(firewall_open_cmd.format(port_str, port_str))
+        else:
+            os.system(input_cmd.format(iptable_way, "tcp", port_str))
+            os.system(input_cmd.format(iptable_way, "udp", port_str))
+            os.system(output_cmd.format(iptable_way, "tcp", port_str))
+            os.system(output_cmd.format(iptable_way, "udp", port_str))
+    else:
+        for port in port_set:
+            port_str = str(port)
+            if len(os.popen(check_cmd.format(iptable_way, port_str)).readlines()) > 0:
+                continue
+            if is_centos8:
+                os.system(firewall_open_cmd.format(port_str, port_str))
+            else:
+                os.system(input_cmd.format(iptable_way, "tcp", port_str))
+                os.system(input_cmd.format(iptable_way, "udp", port_str))
+                os.system(output_cmd.format(iptable_way, "tcp", port_str))
+                os.system(output_cmd.format(iptable_way, "udp", port_str))
+    if is_centos8:
+        os.system("firewall-cmd --reload >/dev/null 2>&1")
 
 def random_email():
     domain = ['163', 'qq', 'sina', '126', 'gmail', 'outlook', 'icloud']
