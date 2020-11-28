@@ -35,21 +35,25 @@ a tool to manage v2ray config json, support multiple user && group manage
   - MTProto
   - Shadowsocks
   - Quic
+  - VLESS
+  - VLESS_WS
+  - VLESS_XTLS
+  - Trojan
 
 ## How To Use
 new install
 ```
-source <(curl -sL https://v2rays.netlify.com/install.sh)
+source <(curl -sL https://multi.netlify.app/v2ray.sh)
 ```
 
 keep profile to update
 ```
-source <(curl -sL https://v2rays.netlify.com/install.sh) -k
+source <(curl -sL https://multi.netlify.app/v2ray.sh) -k
 ```
 
 uninstall
 ```
-source <(curl -sL https://v2rays.netlify.com/install.sh) --remove
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --remove
 ```
 
 ## Command Line
@@ -63,9 +67,10 @@ v2ray [-h|--help] [options]
     status               check V2Ray status
     new                  create new json profile
     update               update v2ray to latest
+    update [version]     update v2ray to special version
     update.sh            update multi-v2ray to latest
-    add                  random create mkcp + (srtp|wechat-video|utp|dtls|wireguard) fake header group
-    add [wechat|utp|srtp|dtls|wireguard|socks|mtproto|ss]     create special protocol, random new port
+    add                  add new group
+    add [protocol]       create special protocol, random new port
     del                  delete port group
     info                 check v2ray profile
     port                 modify port

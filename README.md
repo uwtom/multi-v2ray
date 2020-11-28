@@ -24,6 +24,7 @@ V2ray多用户管理脚本，向导式管理[新增|删除|修改]传输协议�
 - [x] 支持范围端口修改
 - [x] 支持程序和**命令行参数**管理控制
 - [x] 支持docker部署
+- [x] 支持VLESS和Trojan以及XTLS(v4.31.0+)
 - [x] 支持纯ipv6 vps
 - [x] 禁止BT
 
@@ -53,20 +54,24 @@ V2ray多用户管理脚本，向导式管理[新增|删除|修改]传输协议�
   - MTProto
   - Shadowsocks
   - Quic
+  - VLESS
+  - VLESS_WS
+  - VLESS_XTLS
+  - Trojan
 
 ## 安装命令
 ```
-source <(curl -sL https://multi.netlify.com/v2ray.sh) --zh
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --zh
 ```
 
 ## 升级命令(保留配置文件更新)
 ```
-source <(curl -sL https://multi.netlify.com/v2ray.sh) -k
+source <(curl -sL https://multi.netlify.app/v2ray.sh) -k
 ```
 
 ## 卸载命令
 ```
-source <(curl -sL https://multi.netlify.com/v2ray.sh) --remove
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --remove
 ```
 
 ## 命令行参数
@@ -80,9 +85,10 @@ v2ray [-h|--help] [options]
     status               查看 V2Ray 运行状态
     new                  重建新的v2ray json配置文件
     update               更新 V2Ray 到最新Release版本
+    update [version]     更新 V2Ray 到指定版本
     update.sh            更新 multi-v2ray 到最新版本
-    add                  新增mkcp + 随机一种 (srtp|wechat-video|utp|dtls|wireguard) header伪装的端口(Group)
-    add [wechat|utp|srtp|dtls|wireguard|socks|mtproto|ss]     新增一种协议的组，端口随机,如 v2ray add utp 为新增utp协议
+    add                  新增端口组
+    add [protocol]       新增一种协议的组, 端口随机, 如 v2ray add utp 为新增utp协议
     del                  删除端口组
     info                 查看配置
     port                 修改端口
@@ -121,6 +127,10 @@ systemctl disable firewalld.service
 
 ## 变更记录
 查看 [Changelog](https://github.com/Jrohy/multi-v2ray/blob/master/Changelog.md)
+
+## 建议
+安装完v2ray后强烈建议开启BBR等加速: [Linux-NetSpeed](https://github.com/chiakge/Linux-NetSpeed)  
+使用Trojan和VLESS协议建议自行安装个nginx, 能让v2ray顺利Fallback到默认的80端口
 
 ## 依赖
 docker: https://hub.docker.com/r/jrohy/v2ray  

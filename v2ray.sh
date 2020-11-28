@@ -21,7 +21,7 @@ REMOVE=0
 
 CHINESE=0
 
-BASE_SOURCE_PATH="https://multi.netlify.com"
+BASE_SOURCE_PATH="https://multi.netlify.app"
 
 UTIL_PATH="/etc/v2ray_util/util.cfg"
 
@@ -84,8 +84,8 @@ help(){
 }
 
 removeV2Ray() {
-    #卸载V2ray官方脚本
-    bash <(curl -L -s https://install.direct/go.sh) --remove >/dev/null 2>&1
+    #卸载V2ray脚本
+    bash <(curl -L -s https://multi.netlify.app/go.sh) --remove >/dev/null 2>&1
     rm -rf /etc/v2ray >/dev/null 2>&1
     rm -rf /var/log/v2ray >/dev/null 2>&1
 
@@ -153,17 +153,14 @@ checkSys() {
 #安装依赖
 installDependent(){
     if [[ ${PACKAGE_MANAGER} == 'dnf' || ${PACKAGE_MANAGER} == 'yum' ]];then
-        if [[ ${PACKAGE_MANAGER} == 'yum' ]];then
-            ${PACKAGE_MANAGER} ntpdate -y
-        fi
-        ${PACKAGE_MANAGER} install socat crontabs which -y
+        ${PACKAGE_MANAGER} install socat crontabs bash-completion which -y
     else
         ${PACKAGE_MANAGER} update
-        ${PACKAGE_MANAGER} install ntpdate socat cron -y
+        ${PACKAGE_MANAGER} install socat cron bash-completion ntpdate -y
     fi
 
     #install python3 & pip
-    bash <(curl -sL https://python3.netlify.com/install.sh)
+    source <(curl -sL https://python3.netlify.app/install.sh)
 }
 
 updateProject() {
@@ -191,11 +188,13 @@ updateProject() {
     curl $BASH_COMPLETION_SHELL > /usr/share/bash-completion/completions/v2ray
     [[ -z $(echo $SHELL|grep zsh) ]] && source /usr/share/bash-completion/completions/v2ray
     
-    #安装/更新V2ray主程序
-    if [[ $NETWORK == 1 ]];then
-        bash <(curl -L -s https://install.direct/go.sh) --source jsdelivr
-    else
-        bash <(curl -L -s https://install.direct/go.sh)
+    #安装V2ray主程序
+    if [[ ${INSTALL_WAY} == 0 ]];then
+        if [[ $NETWORK == 1 ]];then
+            bash <(curl -L -s https://multi.netlify.app/go.sh) --source jsdelivr
+        else
+            bash <(curl -L -s https://multi.netlify.app/go.sh)
+        fi
     fi
 }
 
